@@ -1,17 +1,25 @@
-forecast <- function(file){
+# function to forecast runoff of a river for given period
+forecast <- function(file, startyr, startmo, period){
+  # import necessary packages
   library(imputeTS)
   library(forecast)
   library(lubridate)
+  # the input of period needs to be numeric
+  if(class(period) != "numeric") 
+  stop("Error: period needs to be a numeric!")
+  # wrangle the original data. Specifically,to make a monthly data set
   file$mo <- as.factor(lubridate::month(file$Date))
   file$yr <- year(file$Date)
   by.mo <- file %>% select(yr,mo,Streamflow) %>% 
   group_by(yr, mo) %>% 
   summarize(runoff = mean(Streamflow))
-  by.mo.ts <- ts(by.mo$runoff, start = c(1969,10),frequency = 12) %>%
+  # create a time series based on given start date and original data and replace NA with linear interpolation
+  by.mo.ts <- ts(by.mo$runoff, start = c(startyr,startmo),frequency = 12) %>%
     na_interpolation(option = "linear")
+  # use Holt-Winters exponential method to predict the original data and plot it
   river.forecasts <- HoltWinters(by.mo.ts)
   plot1 <- plot(river.forecasts)
-  river.forecasts2 <- forecast:::forecast.HoltWinters(river.forecasts, h=120)
+  # use the “forecast.HoltWinters()” to make forecasts for future times not included in the original time series and plot
+  river.forecasts2 <- forecast:::forecast.HoltWinters(river.forecasts, h=period)
   plot2 <- plot(river.forecasts2)
   return(c(plot1, plot2))
-}
