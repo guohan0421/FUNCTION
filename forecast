@@ -1,0 +1,17 @@
+forecast <- function(file){
+  library(imputeTS)
+  library(forecast)
+  library(lubridate)
+  file$mo <- as.factor(lubridate::month(file$Date))
+  file$yr <- year(file$Date)
+  by.mo <- file %>% select(yr,mo,Streamflow) %>% 
+  group_by(yr, mo) %>% 
+  summarize(runoff = mean(Streamflow))
+  by.mo.ts <- ts(by.mo$runoff, start = c(1969,10),frequency = 12) %>%
+    na_interpolation(option = "linear")
+  river.forecasts <- HoltWinters(by.mo.ts)
+  plot1 <- plot(river.forecasts)
+  river.forecasts2 <- forecast:::forecast.HoltWinters(river.forecasts, h=120)
+  plot2 <- plot(river.forecasts2)
+  return(c(plot1, plot2))
+}
